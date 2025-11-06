@@ -1,0 +1,6 @@
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
+flask==3.0.0
+flask-limiter==3.5.0
+imapclient==3.0.1
+gunicorn==21.2.0

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  eeatingh-app:
+    build: .
+    container_name: eeatingh_automation
+    restart: unless-stopped
+    volumes:
+      # Persistență pentru comenzi și logs
+      - ./comenzi:/app/comenzi
+      - ./logs:/app/logs
+      # Persistență pentru counter-ul de comenzi
+      - ./order_counter.txt:/app/order_counter.txt
+    ports:
+      # Expune API server-ul pe portul 5550
+      - "5550:5550"
+    environment:
+      - TZ=Europe/Bucharest
+    env_file:
+      - .env
+    # Comandă de pornire - Gunicorn cu fișier de configurare
+    command: >
+      gunicorn
+      --config gunicorn_config.py
+      wsgi:application
+
+# Notă: Aplicația folosește Gunicorn în producție cu fișier de configurare
+# - Configurare: gunicorn_config.py (pornește servicii background în master process)
+# - Email Listener: Monitorizează emailuri în timp real (IMAP IDLE)
+# - API Server: Disponibil pe http://localhost:5550 cu Gunicorn
+# - Cleanup Service: Curățare automată fișiere vechi (la 24h)
+# - Securitate: API Key + Rate Limiting (vezi README_SECURITY.md)
+# 
+# Comenzi utile:
+# - docker-compose logs -f     # Vezi logs în timp real
+# - docker-compose down         # Oprește aplicația
+# - docker-compose up -d --build  # Rebuild și restart

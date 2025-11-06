@@ -1,0 +1,29 @@
+{
+  "comanda": {
+    "id_intern_comanda": "string",
+    "simbol_monetar": "string",
+    "email_client": "string",
+    "numar_telefon_client": "string",
+    "nume_client": "string",
+    "cartier": "string",
+    "tip_comanda": "string",
+    "adresa_livrare_client": "string",
+    "valoare_comanda": "string",
+    "discounturi": [],
+    "status_comanda": "string",
+    "mod_plata": "string",
+    "observatii_comanda": "string",
+    "data_comanda": "string (YYYY-MM-DD HH:MM:SS)",
+    "produse_comanda": [
+      {
+        "id_produs": null,
+        "denumire_produs": "string",
+        "cantitate_produs": "number",
+        "pret_produs": "string",
+        "id_intern_comanda": "string",
+        "observatii_produs": "string",
+        "extra": []
+      }
+    ]
+  }
+}
