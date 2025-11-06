@@ -261,40 +261,7 @@ docker-compose logs
 
 # Reconstruiește imaginea
 docker-compose up -d --build
-```
 
-## 📝 Structura JSON Generată
-
-Exemplu de JSON generat pentru POSnet:
-
-```json
-{
-  "comanda": {
-    "id_intern_comanda": "6458",
-    "simbol_monetar": "RON",
-    "email_client": "royalmures@gmail.com",
-    "numar_telefon_client": "+40755452101",
-    "nume_client": "Incze Imola Blanka",
-    "tip_comanda": "livrare",
-    "adresa_livrare_client": "Strada Bărăganului 61, Târgu Mureş",
-    "valoare_comanda": "201.60",
-    "status_comanda": "processing",
-    "mod_plata": "CASH",
-    "observatii_comanda": "Va rog sunati cand ajungeti",
-    "data_comanda": "2025-10-18 18:00:00",
-    "produse_comanda": [
-      {
-        "id_produs": null,
-        "denumire_produs": "Paste Bolognese - Standard",
-        "cantitate_produs": 1,
-        "pret_produs": "34.90",
-        "observatii_produs": "",
-        "extra": []
-      }
-    ]
-  }
-}
-```
 
 ## 🎯 Flux de Lucru Complet
 

@@ -262,38 +262,7 @@ docker-compose logs
 
 # Rebuild image
 docker-compose up -d --build
-```
 
-## 📝 Generated JSON Structure
-
-Example JSON generated for POS:
-
-```json
-{
-  "id_intern_comanda": "6458",
-  "simbol_monetar": "RON",
-  "email_client": "royalmures@gmail.com",
-  "numar_telefon_client": "+40755452101",
-  "nume_client": "Incze Imola Blanka",
-  "tip_comanda": "livrare",
-  "adresa_livrare_client": "Strada Baraganului 61, Targu Mures",
-  "valoare_comanda": "201.60",
-  "status_comanda": "processing",
-  "mod_plata": "CASH",
-  "observatii_comanda": "Va rog sunati cand ajungeti",
-  "data_comanda": "2025-10-18 18:00:00",
-  "produse_comanda": [
-    {
-      "id_produs": null,
-      "denumire_produs": "Paste Bolognese - Standard",
-      "cantitate_produs": 1,
-      "pret_produs": "34.90",
-      "observatii_produs": "",
-      "extra": []
-    }
-  ]
-}
-```
 
 **Note:** All text data (client name, address, product names, notes) is automatically normalized without diacritics for maximum compatibility with POS systems.
 
