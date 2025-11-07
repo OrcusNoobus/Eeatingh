@@ -4,7 +4,6 @@ Expune aplicația Flask.
 
 IMPORTANT: Serviciile de background (Email Listener, Cleanup Service) 
 sunt pornite prin gunicorn_config.py în procesul master Gunicorn.
-Nu mai sunt pornite aici pentru a evita duplicarea la fiecare worker.
 """
 
 import os
