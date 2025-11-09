@@ -13,6 +13,7 @@ import locale
 
 from app.config import COMENZI_NOI, COMENZI_PROCESATE, COMENZI_ANULATE
 from app.logging_config import get_logger
+from app.services.notification_service import NotificationService
 
 logger = get_logger("order_service")
 
@@ -268,6 +269,18 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
         
     except Exception as e:
         logger.error(f"Error parsing HTML: {e}", exc_info=True)
+        
+        # --- MODIFICARE ---
+        # Trimite notificare de eroare la parsare
+        try:
+            NotificationService().send_error_notification(
+                error_message=str(e),
+                context=f"parse_order_html - Emailul nu a putut fi parsat."
+            )
+        except:
+            pass
+        # --- SFÂRȘIT MODIFICARE ---
+        
         return None
 
 

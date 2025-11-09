@@ -11,6 +11,7 @@ from threading import Thread
 
 from app.config import COMENZI_PROCESATE, COMENZI_ANULATE, CLEANUP_FILES_DAYS_OLD, CLEANUP_FILES_INTERVAL
 from app.logging_config import get_logger
+from app.services.notification_service import NotificationService
 
 logger = get_logger("cleanup_service")
 
@@ -87,6 +88,20 @@ class CleanupService:
                 logger.info(f"Cleanup completed: {total_deleted} files deleted total")
             else:
                 logger.info("Cleanup completed: No old files found")
+            
+            # --- MODIFICARE ---
+            # Trimite raport de sănătate (health check)
+            try:
+                NotificationService().send_notification(
+                    subject=f"Raport Zilnic Eeatingh (Curățenie OK)",
+                    content=f"Serviciul de curățenie a rulat cu succes.\n\n"
+                            f"Total fișiere vechi șterse: {total_deleted}\n"
+                            f"Aplicația funcționează normal."
+                )
+            except Exception as e:
+                logger.error(f"Eroare la trimiterea raportului zilnic: {e}")
+            # --- SFÂRȘIT MODIFICARE ---
+            
             logger.info("=" * 80)
             
         except Exception as e:
