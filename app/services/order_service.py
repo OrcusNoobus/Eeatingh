@@ -248,7 +248,7 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
                         
                         # Product dictionary in EXACT order from model_comanda_json.txt
                         product_item = {
-                            "id_produs": None,
+                            "id_produs": name,
                             "denumire_produs": name,
                             "cantitate_produs": quantity,
                             "pret_produs": price,
