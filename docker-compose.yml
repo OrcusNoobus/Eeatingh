@@ -7,8 +7,6 @@ services:
       # Persistență pentru comenzi și logs
       - ./comenzi:/app/comenzi
       - ./logs:/app/logs
-      # Persistență pentru counter-ul de comenzi
-      - ./order_counter.txt:/app/order_counter.txt
     ports:
       # Expune API server-ul pe portul 5550
       - "5550:5550"

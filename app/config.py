@@ -26,7 +26,7 @@ LOGS_DIR = BASE_DIR / "logs"
 LOG_FILE = LOGS_DIR / "app.log"
 
 # Fișiere
-ORDER_COUNTER_FILE = BASE_DIR / "order_counter.txt"
+ORDER_COUNTER_FILE = LOGS_DIR / "order_counter.txt"
 
 # Credențiale Email din .env
 EMAIL_USER: Optional[str] = os.getenv("EMAIL_USER")
