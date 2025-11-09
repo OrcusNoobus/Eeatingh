@@ -57,7 +57,7 @@ def when_ready(server):
 
 
 # Configurații Gunicorn
-bind = "0.0.0.0:5550"
+bind = "127.0.0.1:5550"
 workers = 2
 threads = 2
 timeout = 120
