@@ -9,7 +9,7 @@ services:
       - ./logs:/app/logs
     ports:
       # Expune API server-ul pe portul 5550
-      - "5550:5550"
+      - "127.0.0.1:5550:5550"
     environment:
       - TZ=Europe/Bucharest
     env_file:
