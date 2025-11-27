@@ -1,10 +1,17 @@
-# 📧 Eeatingh Order Automation System
+# 📧 Eeatingh Order Automation System | Sistem Automatizare Comenzi Eeatingh
 
-**Version 1.3** - Complete automated system for processing orders received via email from the eeatingh.ro platform.
+**Version 1.4** | **Versiunea 1.4**
 
-## ✨ Features
+---
+
+## 🇺🇸 English Documentation
+
+Complete automated system for processing orders received via email from the eeatingh.ro platform.
+
+### ✨ Features
 
 - ✅ **Real-Time Push Notifications** - Instant processing (1-3 seconds) using IMAP IDLE
+- ✅ **Intelligent HTML Parsing** - Content-based detection (not position-based) for robust parsing
 - ✅ **Secured REST API** - Endpoints protected with API Key and Rate Limiting
 - ✅ **Complete Automatic Cleanup** - Automatically deletes old emails + old JSON files
 - ✅ **Centralized Logging** - All logs in `logs/app.log`
@@ -13,12 +20,14 @@
 - ✅ **Security** - API Key authentication, Rate Limiting, Fail2Ban ready
 - ✅ **Single Entry Point** - One command starts all services
 
-## 🚀 Quick Installation
+### 🚀 Quick Installation
 
-### Docker (Production)
+#### Docker (Production)
 
 ```bash
-# 1. Configure credentials in .env (see below)
+# 1. Configure credentials in .env
+cp .env.example .env
+nano .env
 
 # 2. Build and start
 docker-compose up -d
@@ -30,9 +39,7 @@ docker-compose logs -f
 docker-compose down
 ```
 
-## ⚙️ Configuration
-
-### .env File
+### ⚙️ Configuration
 
 Create/edit the `.env` file:
 
@@ -44,11 +51,11 @@ EMAIL_PASS="your-app-password"  # App Password, NOT Gmail password
 # Email for error notifications
 NOTIFICATION_RECIPIENT="admin@example.com"
 
-# API Security (optional but recommended)
+# API Security (recommended)
 API_KEY="your-secret-api-key-here"
 ```
 
-### 🔐 Getting Gmail App Password
+#### 🔐 Getting Gmail App Password
 
 1. Go to [Google Account Security](https://myaccount.google.com/security)
 2. Enable **2-Step Verification**
@@ -56,310 +63,313 @@ API_KEY="your-secret-api-key-here"
 4. Generate new password for "Mail"
 5. Copy the password to `.env`
 
-## 📁 Project Structure
+### 📁 Project Structure
 
 ```
 Eeatingh/
-├── wsgi.py                    # ⭐ ENTRY POINT (WSGI for Gunicorn)
-├── app/                       # 📦 Application code
-│   ├── __init__.py
-│   ├── config.py              # Centralized configuration
-│   ├── logging_config.py      # Centralized logging
-│   ├── api_server.py          # REST API for integration
-│   └── services/              # Application services
-│       ├── __init__.py
-│       ├── email_listener.py  # Email monitoring (IMAP IDLE + cleanup)
-│       ├── order_service.py   # Order processing
-│       ├── cleanup_service.py # Automatic file cleanup
-│       └── notification_service.py  # Email notifications
-├── .env                       # Configuration (credentials)
-├── requirements.txt           # Python dependencies
-├── Dockerfile                 # Docker configuration
-├── docker-compose.yml         # Docker orchestration
-├── comenzi/                   # Order folders
-│   ├── noi/                   # New orders (for POS)
-│   ├── procesate/             # Confirmed orders
+├── wsgi.py                    # ⭐ ENTRY POINT
+├── app/
+│   ├── api_server.py          # REST API
+│   ├── config.py              # Configuration
+│   ├── logging_config.py      # Logging
+│   └── services/
+│       ├── email_listener.py  # Email monitoring (IMAP IDLE)
+│       ├── order_service.py   # Smart order parsing
+│       ├── cleanup_service.py # Automatic cleanup
+│       └── notification_service.py
+├── comenzi/                   # Orders
+│   ├── noi/                   # New orders
+│   ├── procesate/             # Processed orders
 │   └── anulate/               # Cancelled orders
-└── logs/
-    └── app.log                # Centralized logs
+├── logs/app.log               # Centralized logs
+├── modificari.md              # Recent changes (v1.4)
+├── architecture.md            # System architecture
+└── docker-compose.yml
 ```
 
-## 💻 How It Works
+### 🔌 API Endpoints
 
-### What Does the Application Do?
+**🔐 Important:** Most endpoints require API Key authentication!
 
-1. **Email Listener** continuously monitors Gmail inbox using IMAP IDLE
-2. When a new email arrives from royalmures@gmail.com, it processes it **instantly**
-3. Extracts order data (products, client, address, etc.)
-4. Generates JSON file in `comenzi/noi/`
-5. Every 15 orders, automatically deletes old emails (>3 days)
-6. **Cleanup Service** automatically deletes old JSON files (>7 days) every 24h
-7. **API Server** (Gunicorn) exposes orders to external systems (POS)
-8. **Security**: All important endpoints are protected with API Key
-
-### Starting the Application
-
-**Production (Docker):**
-```bash
-docker-compose up -d
-```
-
-**Expected output (in logs):**
-```
-🚀 Starting background services
-📧 Starting Email Listener...
-🧹 Starting Cleanup Service...
-✅ Background services started successfully!
-```
-
-**Check status:**
-```bash
-# View logs in real-time
-docker-compose logs -f
-
-# Check if container is running
-docker-compose ps
-```
-
-### Complete Automation
-
-- ✅ **Email processing**: Automatic, real-time (IMAP IDLE)
-- ✅ **Email cleanup**: Automatic, every 15 orders (>3 days)
-- ✅ **File cleanup**: Automatic, every 24h (>7 days history)
-- ✅ **Reconnection**: Automatic on connection loss
-- ✅ **Service restart**: Automatic in case of error
-- ✅ **API Security**: API Key authentication + Rate Limiting
-
-## 🔌 API Endpoints
-
-**🔐 Important Note:** Most endpoints require authentication with API Key!
-
-Add the header in all requests:
+Add header to all requests:
 ```http
 X-API-Key: your-secret-api-key
 ```
 
-### 1. Orders (Unified Endpoint) 🔒
+#### GET /api/comenzi 🔒
+Retrieve the next unprocessed order.
 
-**GET** - Retrieve the next unprocessed order:
-```http
-GET http://localhost:5550/api/comenzi
-X-API-Key: your-secret-api-key
-```
+#### POST /api/comenzi 🔒
+Confirm or cancel an order.
 
-Returns the first order with `status_comanda: "processing"` (as per POSnet requirements).
-
-**POST** - Confirm or cancel an order:
-```http
-POST http://localhost:5550/api/comenzi
-Content-Type: application/json
-X-API-Key: your-secret-api-key
-
+```json
 {
   "id_comanda": "6458",
-  "operatiune": "CONFIRMA",  // or "ANULEAZA"
-  "timp_livrare": 60          // optional
+  "operatiune": "CONFIRMA",
+  "timp_livrare": 60
 }
 ```
 
-### 2. Specific Order 🔒
-```http
-GET http://localhost:5550/api/comanda/6458
-X-API-Key: your-secret-api-key
-```
+#### GET /api/comanda/{id} 🔒
+Get specific order details.
 
-### 3. Statistics 🔒
-```http
-GET http://localhost:5550/api/statistici
-X-API-Key: your-secret-api-key
-```
+#### GET /api/statistici 🔒
+Get order statistics.
 
-### 4. Health Check (Public - no authentication)
-```http
-GET http://localhost:5550/api/health
-```
+#### GET /api/health
+Health check (public, no auth required).
 
-## 🐳 Docker Deployment
+### 🆕 What's New in Version 1.4
 
-### Deployment on Server (VPS/Contabo)
+#### Critical Bug Fixes
+- ✅ **Smart HTML Parsing** - Content-based detection instead of position-based
+  - Handles missing client names gracefully
+  - Phone number detection with regex patterns
+  - Address detection using keywords + Google Maps links
+  - Payment method detection (CASH, POS, CARD, ramburs)
+- ✅ **Word Boundary Protection** - Prevents false matches (e.g., "ap" in "Pap")
+- ✅ **Robust Payment Detection** - Skips headers, detects all payment types
+
+#### Testing
+All edge cases tested and working:
+- Orders without client name ✅
+- Orders with POS/ramburs payment ✅
+- Various HTML structures ✅
+
+For detailed technical explanation, see [modificari.md](modificari.md)
+
+### 🐳 Docker Deployment
 
 ```bash
-# 1. Copy project to server
-scp -r Eeatingh/ user@your-server:/opt/
-
-# 2. Connect to server
-ssh user@your-server
-
-# 3. Navigate to directory
-cd /opt/Eeatingh
-
-# 4. Build and start
+# Start
 docker-compose up -d
-
-# 5. View logs in real-time
-docker-compose logs -f
-
-# 6. Check status
-docker-compose ps
-```
-
-### Useful Docker Commands
-
-```bash
-# Restart
-docker-compose restart
-
-# Rebuild after changes
-docker-compose up -d --build
-
-# Stop
-docker-compose down
 
 # View logs
 docker-compose logs -f
+
+# Restart
+docker-compose restart
+
+# Stop
+docker-compose down
 ```
 
-## 📊 Monitoring & Logs
-
-All services write to the same centralized log file:
+### 📊 Monitoring
 
 ```bash
-# View logs in real-time
+# Real-time logs
 tail -f logs/app.log
 
-# Last 100 lines
-tail -n 100 logs/app.log
-
-# Search for errors
+# Search errors
 grep "ERROR" logs/app.log
 ```
 
-## 🔧 Troubleshooting
+### 🔒 Security
 
-### Error: "Authentication failed"
-- Check credentials in `.env`
-- Make sure you're using **App Password**, not Gmail password
-- Verify that 2-Step Verification is enabled
+- **API Key Authentication** - Protect all endpoints
+- **Rate Limiting** - 100 requests/minute per IP
+- **Gunicorn Production Server** - Professional WSGI
+- **Fail2Ban Ready** - Structured logs
+- **Docker Isolation** - Containerized environment
 
-### Application not processing emails
-- Check logs: `tail -f logs/app.log`
-- Verify sender is `royalmures@gmail.com`
-- Test connection: send a test email
-
-### Port 5550 already in use
-```bash
-# Find the process
-lsof -i :5550
-
-# Stop the process
-kill -9 <PID>
-```
-
-### Docker: Container stops
-```bash
-# View logs for errors
-docker-compose logs
-
-# Rebuild image
-docker-compose up -d --build
-
-
-**Note:** All text data (client name, address, product names, notes) is automatically normalized without diacritics for maximum compatibility with POS systems.
-
-## 🎯 Complete Workflow
-
-1. **Start application**: `docker-compose up -d`
-2. Application automatically starts 3 services:
-   - **Email Listener** - Email monitoring IMAP IDLE
-   - **API Server** - Gunicorn on port 5550
-   - **Cleanup Service** - Automatic old file cleanup
-3. When a new order arrives:
-   - Email Listener detects it instantly (1-3 sec)
-   - Processes email and generates JSON in `comenzi/noi/`
-   - Counts the processed order
-4. POS system retrieves the order:
-   - Calls `GET /api/comenzi` (with API Key)
-   - Retrieves order data
-   - Confirms/cancels with `POST /api/comenzi` (with API Key)
-5. Automatic cleanups:
-   - **Emails**: Every 15 orders (>3 days)
-   - **JSON files**: Every 24h (>7 days history)
-6. Everything is logged in `logs/app.log`
-
-## 🔒 Security
-
-### Implemented Security Features
-
-- ✅ **API Key Authentication** - All important endpoints are protected
-- ✅ **Rate Limiting** - 100 requests/minute per IP (prevents brute-force)
-- ✅ **Gunicorn Production Server** - Professional WSGI server, not development server
-- ✅ **Fail2Ban Ready** - Structured logs for Fail2Ban integration
-- ✅ **Credentials in .env** - Not committed to Git
-- ✅ **Gmail App Password** - Not real password
-- ✅ **Docker Isolation** - Application runs isolated
-
-### Quick Security Setup
-
-1. **Generate API Key:**
+Generate API Key:
 ```bash
 openssl rand -hex 32
 ```
 
-2. **Add to `.env`:**
-```env
-API_KEY="generated-key-above"
-```
+### 📖 Documentation
 
-3. **Restart application:**
+- **[architecture.md](architecture.md)** - System architecture and design
+- **[modificari.md](modificari.md)** - Recent changes and bug fixes (v1.4)
+
+---
+
+## 🇷🇴 Documentație în Limba Română
+
+Sistem complet automatizat pentru procesarea comenzilor primite prin email de la platforma eeatingh.ro.
+
+### ✨ Caracteristici
+
+- ✅ **Notificări Push în Timp Real** - Procesare instant (1-3 secunde) folosind IMAP IDLE
+- ✅ **Parsare HTML Inteligentă** - Detectare bazată pe conținut (nu pe poziție) pentru parsare robustă
+- ✅ **API REST Securizat** - Endpoints protejate cu API Key și Rate Limiting
+- ✅ **Curățare Automată Completă** - Șterge emailuri vechi + fișiere JSON vechi automat
+- ✅ **Logging Centralizat** - Toate log-urile în `logs/app.log`
+- ✅ **Server de Producție** - Gunicorn WSGI server (nu Flask development server)
+- ✅ **Deployment Docker** - Optimizat pentru producție
+- ✅ **Securitate** - Autentificare API Key, Rate Limiting, Fail2Ban ready
+- ✅ **Punctul Unic de Pornire** - O singură comandă pornește toate serviciile
+
+### 🚀 Instalare Rapidă
+
+#### Docker (Producție)
+
 ```bash
+# 1. Configurează credențialele în .env
+cp .env.example .env
+nano .env
+
+# 2. Build și start
+docker-compose up -d
+
+# 3. Vezi logs
+docker-compose logs -f
+
+# 4. Oprire
+docker-compose down
+```
+
+### ⚙️ Configurare
+
+Creează/editează fișierul `.env`:
+
+```env
+# Gmail Account (pentru citire emailuri)
+EMAIL_USER="your-email@gmail.com"
+EMAIL_PASS="your-app-password"  # App Password, NU parola Gmail
+
+# Email notificări erori
+NOTIFICATION_RECIPIENT="admin@example.com"
+
+# API Security (recomandat)
+API_KEY="your-secret-api-key-here"
+```
+
+#### 🔐 Obținere App Password Gmail
+
+1. Accesează [Google Account Security](https://myaccount.google.com/security)
+2. Activează **2-Step Verification**
+3. Mergi la **App passwords**
+4. Generează password nou pentru "Mail"
+5. Copiază password-ul în `.env`
+
+### 📁 Structura Proiectului
+
+```
+Eeatingh/
+├── wsgi.py                    # ⭐ PUNCT DE PORNIRE
+├── app/
+│   ├── api_server.py          # API REST
+│   ├── config.py              # Configurare
+│   ├── logging_config.py      # Logging
+│   └── services/
+│       ├── email_listener.py  # Monitoring emailuri (IMAP IDLE)
+│       ├── order_service.py   # Parsare inteligentă comenzi
+│       ├── cleanup_service.py # Curățare automată
+│       └── notification_service.py
+├── comenzi/                   # Comenzi
+│   ├── noi/                   # Comenzi noi
+│   ├── procesate/             # Comenzi procesate
+│   └── anulate/               # Comenzi anulate
+├── logs/app.log               # Log-uri centralizate
+├── modificari.md              # Modificări recente (v1.4)
+├── architecture.md            # Arhitectura sistemului
+└── docker-compose.yml
+```
+
+### 🔌 API Endpoints
+
+**🔐 Important:** Majoritatea endpoint-urilor necesită autentificare cu API Key!
+
+Adaugă header în toate request-urile:
+```http
+X-API-Key: your-secret-api-key
+```
+
+#### GET /api/comenzi 🔒
+Preia următoarea comandă neprocesată.
+
+#### POST /api/comenzi 🔒
+Confirmă sau anulează o comandă.
+
+```json
+{
+  "id_comanda": "6458",
+  "operatiune": "CONFIRMA",
+  "timp_livrare": 60
+}
+```
+
+#### GET /api/comanda/{id} 🔒
+Obține detaliile unei comenzi specifice.
+
+#### GET /api/statistici 🔒
+Obține statistici comenzi.
+
+#### GET /api/health
+Health check (public, fără autentificare).
+
+### 🆕 Ce e Nou în Versiunea 1.4
+
+#### Rezolvări Bug-uri Critice
+- ✅ **Parsare HTML Inteligentă** - Detectare bazată pe conținut în loc de poziție
+  - Gestionează elegant lipsa numelui clientului
+  - Detectare număr telefon cu pattern-uri regex
+  - Detectare adresă folosind cuvinte cheie + link-uri Google Maps
+  - Detectare mod plată (CASH, POS, CARD, ramburs)
+- ✅ **Protecție Word Boundary** - Previne potriviri false (ex: "ap" în "Pap")
+- ✅ **Detectare Robustă Mod Plată** - Ignoră header-e, detectează toate tipurile de plată
+
+#### Testare
+Toate cazurile limită testate și funcționale:
+- Comenzi fără nume client ✅
+- Comenzi cu plată POS/ramburs ✅
+- Structuri HTML variate ✅
+
+Pentru explicație tehnică detaliată, vezi [modificari.md](modificari.md)
+
+### 🐳 Docker Deployment
+
+```bash
+# Pornire
+docker-compose up -d
+
+# Vezi logs
+docker-compose logs -f
+
+# Restart
 docker-compose restart
+
+# Oprire
+docker-compose down
 ```
 
-### Recommended Security Architecture (Production)
+### 📊 Monitoring
 
+```bash
+# Logs în timp real
+tail -f logs/app.log
+
+# Caută erori
+grep "ERROR" logs/app.log
 ```
-Internet → Nginx (SSL + Fail2Ban) → Gunicorn (API Key + Rate Limit) → Application
+
+### 🔒 Securitate
+
+- **Autentificare API Key** - Protejează toate endpoint-urile
+- **Rate Limiting** - 100 request-uri/minut per IP
+- **Gunicorn Production Server** - WSGI profesional
+- **Fail2Ban Ready** - Log-uri structurate
+- **Izolare Docker** - Environment containerizat
+
+Generează API Key:
+```bash
+openssl rand -hex 32
 ```
 
-- **Nginx**: Reverse proxy with SSL/TLS, rate limiting, security headers
-- **Fail2Ban**: Blocks IPs after failed attempts
-- **Gunicorn**: Production server with multi-worker support
-- **API Key**: Application-level authentication
-- **Rate Limiting**: Protection against abuse
+### 📖 Documentație
 
-## 📞 Support
+- **[architecture.md](architecture.md)** - Arhitectura și design-ul sistemului
+- **[modificari.md](modificari.md)** - Modificări recente și rezolvări bug-uri (v1.4)
 
-For issues:
-1. Check logs: `logs/app.log`
-2. Check settings in `.env`
-3. Test with manual email
-4. Verify internet connection
+---
+
+**Version:** 1.4
+**Last Update:** November 26, 2025
+**Improvements:** Intelligent HTML parsing, robust payment detection, comprehensive bug fixes
+
+**Built with:** Python 3.11, Flask, Gunicorn, IMAPClient, BeautifulSoup4, Docker
 
 ## 📄 License
 
 Private Property - Royal Food Delivery
-
-## 🌐 Language Support
-
-- **English Documentation**: `README.md` (this file)
-- **Romanian Documentation**: `README_RO.md`
-
-## 🆕 What's New in Version 1.3
-
-### Enhanced API
-- ✅ **Unified Endpoint `/api/comenzi`** - Same route for GET and POST
-- ✅ **JSON Key Order Preservation** - Exact order from model for POSnet
-- ✅ API simplification and clarification
-
-### Technical Improvements
-- ✅ `app.json.sort_keys = False` for maximum compatibility
-- ✅ Code refactoring for maintainability
-- ✅ Complete documentation update
-
----
-
-**Version:** 1.3  
-**Last Update:** November 6, 2025  
-**Improvements:** Unified endpoint, JSON order preservation, Senior-level code refinement
-
-**Built with:** Python 3.11, Flask, Gunicorn, IMAPClient, BeautifulSoup4, Docker

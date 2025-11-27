@@ -19,12 +19,7 @@ services:
       gunicorn
       --config gunicorn_config.py
       wsgi:application
-    networks:
-      - eeatingh-networks
-
-networks:
-  eeatingh-networks:
-    driver: bridge
+      
 
 # Notă: Aplicația folosește Gunicorn în producție cu fișier de configurare
 # - Configurare: gunicorn_config.py (pornește servicii background în master process)
