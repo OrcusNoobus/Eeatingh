@@ -261,8 +261,8 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
                 order_data["numar_telefon_client"] = detected_phone
             if detected_address:
                 order_data["adresa_livrare_client"] = detected_address
-            if detected_name:
-                order_data["nume_client"] = detected_name
+            # Use detected name or default to "client_eeatingh" if missing
+            order_data["nume_client"] = detected_name if detected_name else "client_eeatingh"
 
             # Extract order notes (Mesaj section)
             message_header_tag = delivery_table.find('td', string='Mesaj:')
@@ -318,10 +318,14 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
                     if len(cols) == 3:
                         name = remove_diacritics(cols[0].text.strip())
                         quantity_match = re.search(r'(\d+)', cols[1].text.strip())
-                        quantity = int(quantity_match.group(1)) if quantity_match else 0
+                        quantity = int(quantity_match.group(1)) if quantity_match else 1
                         price_match = re.search(r'(\d+\.\d{2})', cols[2].text.strip())
-                        price = price_match.group(1) if price_match else "0.00"
-                        
+                        total_price = float(price_match.group(1)) if price_match else 0.00
+
+                        # Calculate unit price (HTML contains total price, POSnet multiplies by quantity)
+                        unit_price = total_price / quantity if quantity > 0 else total_price
+                        price = f"{unit_price:.2f}"
+
                         # Product dictionary in EXACT order from model_comanda_json.txt
                         product_item = {
                             "id_produs": name,
