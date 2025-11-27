@@ -34,6 +34,6 @@ networks:
 # - Securitate: API Key + Rate Limiting (vezi README_SECURITY.md)
 #
 # Comenzi utile:
-# - docker-compose logs -f      # Vezi logs în timp real
-# - docker-compose down         # Oprește aplicația
-# - docker-compose up -d --build  # Rebuild și restart
+# - docker compose logs -f      # Vezi logs în timp real
+# - docker compose down         # Oprește aplicația
+# - docker compose up -d --build  # Rebuild și restart
