@@ -19,6 +19,12 @@ services:
       gunicorn
       --config gunicorn_config.py
       wsgi:application
+    networks:
+      - eeatingh-networks
+
+networks:
+  eeatingh-networks:
+    driver: bridge
 
 # Notă: Aplicația folosește Gunicorn în producție cu fișier de configurare
 # - Configurare: gunicorn_config.py (pornește servicii background în master process)
@@ -26,8 +32,8 @@ services:
 # - API Server: Disponibil pe http://localhost:5550 cu Gunicorn
 # - Cleanup Service: Curățare automată fișiere vechi (la 24h)
 # - Securitate: API Key + Rate Limiting (vezi README_SECURITY.md)
-# 
+#
 # Comenzi utile:
-# - docker-compose logs -f     # Vezi logs în timp real
+# - docker-compose logs -f      # Vezi logs în timp real
 # - docker-compose down         # Oprește aplicația
 # - docker-compose up -d --build  # Rebuild și restart

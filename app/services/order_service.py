@@ -9,10 +9,9 @@ import unicodedata
 from datetime import datetime
 from typing import Optional, Dict
 from bs4 import BeautifulSoup
-import locale
-
 from app.config import COMENZI_NOI, COMENZI_PROCESATE, COMENZI_ANULATE
 from app.logging_config import get_logger
+from app.services.notification_service import NotificationService
 
 logger = get_logger("order_service")
 
@@ -186,15 +185,86 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
         if delivery_header:
             delivery_table = delivery_header.find_parent('table')
             info_tags = delivery_table.find_all('td', style=re.compile(r"font-family.*Roboto Condensed", re.IGNORECASE))
-            text_tags = [tag for tag in info_tags if tag.text.strip() and not tag.text.strip().startswith('Adresa')]
-            
-            if len(text_tags) >= 3:
-                order_data["nume_client"] = remove_diacritics(text_tags[0].text.strip())
-                order_data["numar_telefon_client"] = text_tags[1].text.strip()
-                address_text = text_tags[2].text.strip()
-                order_data["adresa_livrare_client"] = remove_diacritics(re.sub(r'\s+', ' ', address_text))
-            
-            # Extract order notes
+
+            # Filter out header, spacers, and irrelevant tags
+            text_tags = []
+            for tag in info_tags:
+                text = tag.text.strip()
+                # Skip empty, headers, spacers, and "thank you" messages
+                if (text and
+                    not text.startswith('Adresa') and
+                    text != 'Vă mulțumim!' and
+                    text != 'Va multumim!' and
+                    'Click aici' not in text and
+                    'vizualiza comanda' not in text.lower()):
+                    text_tags.append(tag)
+
+            # Smart detection based on content patterns
+            phone_pattern = re.compile(r'^(\+?4?0?7\d{8}|\d{10}|\+?\d{11,12})$')
+            # Address keywords - use word boundaries to avoid false positives (e.g., "ap" in "Pap")
+            address_keywords_pattern = re.compile(
+                r'\b(str\.?|strada|bloc|etaj|ap\.?|nr\.?|judet|oras|municipiu|sat|comuna|sector|'
+                r'mures|maros|cluj|bucuresti|timis|brasov|sibiu|alba|principala|calea|bulevardul|'
+                r'aleea|piata)\b',
+                re.IGNORECASE
+            )
+
+            detected_phone = None
+            detected_address = None
+            detected_name = None
+            candidates = []  # Store candidates for later analysis
+
+            for tag in text_tags:
+                text = tag.text.strip()
+
+                # Skip if it's a link to view order
+                if tag.find('a') and 'track.smbcl.com' in str(tag):
+                    continue
+
+                # Detect phone number (starts with 07, +407, 07xx, or is all digits 10-12 chars)
+                clean_text = re.sub(r'[\s\-\.]', '', text)
+                if phone_pattern.match(clean_text) or (clean_text.isdigit() and 10 <= len(clean_text) <= 12):
+                    if not detected_phone:
+                        detected_phone = text
+                    continue
+
+                # Detect address: has Google Maps link OR contains address keywords OR has comma with numbers
+                has_maps_link = tag.find('a', href=re.compile(r'google.com/maps|maps.google'))
+                has_address_keywords = bool(address_keywords_pattern.search(text))
+                has_address_pattern = bool(re.search(r'\d+.*,|,.*\d+', text))  # numbers with comma = likely address
+
+                is_definite_address = has_maps_link or has_address_keywords or has_address_pattern
+
+                if is_definite_address and not detected_address:
+                    detected_address = remove_diacritics(re.sub(r'\s+', ' ', text))
+                    continue
+
+                # Collect remaining candidates (potential names)
+                if len(text) < 80 and len(re.findall(r'\d', text)) <= 2:
+                    candidates.append(text)
+
+            # Process candidates: first non-address-like candidate is likely the name
+            for candidate in candidates:
+                # Name: typically no numbers, no commas, looks like a person name (2-4 words)
+                word_count = len(candidate.split())
+                has_numbers = bool(re.search(r'\d', candidate))
+                has_comma = ',' in candidate
+
+                if not detected_name and word_count <= 5 and not has_numbers and not has_comma:
+                    detected_name = remove_diacritics(candidate)
+                elif not detected_address and (has_comma or has_numbers or word_count > 3):
+                    # Could be address without Google Maps link
+                    detected_address = remove_diacritics(re.sub(r'\s+', ' ', candidate))
+
+            # Assign detected values
+            if detected_phone:
+                order_data["numar_telefon_client"] = detected_phone
+            if detected_address:
+                order_data["adresa_livrare_client"] = detected_address
+            # Use detected name or default to "client_eeatingh" if missing
+            order_data["nume_client"] = detected_name if detected_name else "client_eeatingh"
+
+            # Extract order notes (Mesaj section)
             message_header_tag = delivery_table.find('td', string='Mesaj:')
             if message_header_tag:
                 message_row = message_header_tag.find_parent('tr').find_next_sibling('tr')
@@ -207,17 +277,23 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
         payment_header = soup.find('td', string='Plata:')
         if payment_header:
             payment_table = payment_header.find_parent('table')
-            payment_method_tag = payment_table.find('td', style=re.compile(r'font-weight:700'))
-            if payment_method_tag:
-                payment_text = payment_method_tag.text.strip().lower()
+            # Find all bold td elements and skip the header itself
+            bold_tags = payment_table.find_all('td', style=re.compile(r'font-weight:700'))
+            for tag in bold_tags:
+                tag_text = tag.text.strip()
+                # Skip if it's the header
+                if tag_text == 'Plata:':
+                    continue
+                payment_text = tag_text.lower()
                 if 'numerar' in payment_text or 'cash' in payment_text:
                     order_data["mod_plata"] = "CASH"
-                elif 'pos' in payment_text or 'card' in payment_text:
+                elif 'pos' in payment_text or 'card' in payment_text or 'ramburs' in payment_text:
                     order_data["mod_plata"] = "CARD"
                 elif 'online' in payment_text:
                     order_data["mod_plata"] = "ONLINE"
                 else:
                     order_data["mod_plata"] = "CASH"
+                break  # Found payment method, stop searching
 
         # 5. Extract total value
         total_tag = soup.find('td', string=lambda text: text and 'TOTAL:' in text.upper() if text else False)
@@ -242,10 +318,14 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
                     if len(cols) == 3:
                         name = remove_diacritics(cols[0].text.strip())
                         quantity_match = re.search(r'(\d+)', cols[1].text.strip())
-                        quantity = int(quantity_match.group(1)) if quantity_match else 0
+                        quantity = int(quantity_match.group(1)) if quantity_match else 1
                         price_match = re.search(r'(\d+\.\d{2})', cols[2].text.strip())
-                        price = price_match.group(1) if price_match else "0.00"
-                        
+                        total_price = float(price_match.group(1)) if price_match else 0.00
+
+                        # Calculate unit price (HTML contains total price, POSnet multiplies by quantity)
+                        unit_price = total_price / quantity if quantity > 0 else total_price
+                        price = f"{unit_price:.2f}"
+
                         # Product dictionary in EXACT order from model_comanda_json.txt
                         product_item = {
                             "id_produs": name,
@@ -268,6 +348,18 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
         
     except Exception as e:
         logger.error(f"Error parsing HTML: {e}", exc_info=True)
+        
+        # --- MODIFICARE ---
+        # Trimite notificare de eroare la parsare
+        try:
+            NotificationService().send_error_notification(
+                error_message=str(e),
+                context=f"parse_order_html - Emailul nu a putut fi parsat."
+            )
+        except:
+            pass
+        # --- SFÂRȘIT MODIFICARE ---
+        
         return None
 
 

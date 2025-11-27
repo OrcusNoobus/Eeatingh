@@ -15,6 +15,7 @@ from app.config import (
 )
 from app.logging_config import get_logger
 from app.services.order_service import parse_order_html, save_order_json, is_order_processed
+from app.services.notification_service import NotificationService
 
 logger = get_logger("email_listener")
 
@@ -325,6 +326,18 @@ class EmailListener:
                     
             except Exception as e:
                 logger.error(f"❌ Eroare în loop principal: {e}", exc_info=True)
+                
+                # --- MODIFICARE ---
+                # Trimite notificare de eroare CRITICĂ
+                try:
+                    NotificationService().send_error_notification(
+                        error_message=str(e),
+                        context="EmailListener - idle_loop (CRITICĂ)"
+                    )
+                except:
+                    pass  # Nu vrem să crăpăm dacă nici notificarea nu merge
+                # --- SFÂRȘIT MODIFICARE ---
+                
                 logger.info("⏳ Reîncerc în 30 secunde...")
                 self.disconnect()
                 time.sleep(30)
