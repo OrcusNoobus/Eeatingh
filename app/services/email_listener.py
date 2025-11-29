@@ -260,8 +260,8 @@ class EmailListener:
                 # Conectare dacă nu suntem conectați
                 if not self.mail:
                     if not self.connect():
-                        logger.warning("⏳ Reîncerc conexiunea în 30 secunde...")
-                        time.sleep(30)
+                        logger.warning("⏳ Reîncerc conexiunea în 20 secunde...")
+                        time.sleep(20)
                         continue
                     
                     # Procesează emailurile necitite existente
@@ -290,18 +290,37 @@ class EmailListener:
                                     if b'EXISTS' in response or b'RECENT' in response or b'FETCH' in response:
                                         logger.info(f"🔔 Email nou detectat! {response}")
                                         has_new_emails = True
+                                        break
                             
                             # Procesează emailurile noi
                             if has_new_emails:
                                 self.mail.idle_done()
                                 logger.info("⏸️  Ieșit din IDLE mode pentru procesare")
                                 
-                                messages = self.mail.search(['UNSEEN', 'FROM', EMAIL_SENDER])
+                                #Modificare pentru a evita race condition
+                                messages = []
+                                #incercam de 3 ori sa gasim email-ul care a declansat notificarea
+                                for attempt in range(1, 5):
+                                    wait_time = 1 * attempt
+                                    logger.info(f"⏳ (Încercarea {attempt}/4) Aștept {wait_time}s pentru indexare Gmail...")
+
+                                    time.sleep(wait_time)
+
+                                    logger.info(f"🔎 Caut emailuri UNSEEN de la {EMAIL_SENDER}...")
+                                    messages = self.mail.search(['UNSEEN', 'FROM', EMAIL_SENDER])
+
+                                    if messages:
+                                        logger.info(f"✅ Găsit {len(messages)} email(uri) la încercarea {attempt}")
+                                        break
+                                    else:
+                                        logger.warning(f"⚠️ Nu am găsit emailuri la încercarea {attempt}.")
                                 
                                 if messages:
                                     logger.info(f"📨 Procesare {len(messages)} email(uri) nou(i)")
                                     for email_id in messages:
                                         self.process_new_email(email_id)
+                                else:
+                                    logger.error(f"❌ EROARE CRITICĂ: Notificare primită, dar emailul nu a fost găsit după 3 încercări.")
                                 
                                 # Reintrare în IDLE
                                 self.mail.idle()
