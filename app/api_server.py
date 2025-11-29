@@ -106,15 +106,9 @@ def handle_comenzi():
     
     GET Request:
         Return the first new unprocessed order with status "processing".
-        Response: JSON object in format: { "comanda": { ... } }
     
     POST Request:
-        Process an order (confirm or cancel).
-        POST parameters:
-            - id_comanda: Order ID (required)
-            - operatiune: "CONFIRMA" or "ANULEAZA" (required)
-            - timp_livrare: Estimated delivery time in minutes (optional, only for CONFIRMA)
-        Response: JSON with operation status
+        Process an order (confirm or cancel) OR acknowledge updates for processed orders.
     """
     if request.method == 'GET':
         # GET - Preia următoarea comandă neprocesată
@@ -155,7 +149,7 @@ def handle_comenzi():
             }), 500
     
     elif request.method == 'POST':
-        # POST - Procesează comanda (confirmare sau anulare)
+        # POST - Procesează comanda sau primește update-uri
         try:
             # Parameter validation
             if not request.is_json:
@@ -164,6 +158,12 @@ def handle_comenzi():
                 }), 400
             
             data = request.get_json()
+            
+            # --- CAPCANA PENTRU POS ---
+            # Logăm payload-ul ca să vedem ce trimite POS-ul la "Start Livrare"
+            logger.info(f"🕵️ POST RECEIVED (PAYLOAD): {json.dumps(data, ensure_ascii=False)}")
+            # --------------------------
+
             id_comanda = data.get('id_comanda')
             operatiune = data.get('operatiune', '').upper()
             timp_livrare = data.get('timp_livrare')
@@ -173,29 +173,48 @@ def handle_comenzi():
                     "error": "Parameter 'id_comanda' is required"
                 }), 400
             
+            # --- LOGICA NOUĂ DE CĂUTARE ---
+            found_path = None
+            found_folder_type = None # 'noi' sau 'procesate'
+
+            # 1. Căutăm întâi în comenzi NOI
+            if COMENZI_NOI.exists():
+                for filename in os.listdir(COMENZI_NOI):
+                    if filename.endswith('.json') and f"comanda_{id_comanda}.json" in filename:
+                        found_path = COMENZI_NOI / filename
+                        found_folder_type = 'noi'
+                        break
+            
+            # 2. Dacă nu e nouă, căutăm în PROCESATE (pentru update-uri de la POS)
+            if not found_path and COMENZI_PROCESATE.exists():
+                for filename in os.listdir(COMENZI_PROCESATE):
+                    if filename.endswith('.json') and f"comanda_{id_comanda}.json" in filename:
+                        found_path = COMENZI_PROCESATE / filename
+                        found_folder_type = 'procesate'
+                        break
+
+            if not found_path:
+                logger.warning(f"❌ Order #{id_comanda} not found anywhere (sending 404)")
+                return jsonify({
+                    "error": f"Order #{id_comanda} not found"
+                }), 404
+            
+            # --- TRATARE ÎN FUNCȚIE DE STARE ---
+
+            # CAZ A: Comanda este deja procesată -> Returnăm 200 OK
+            if found_folder_type == 'procesate':
+                logger.info(f"ℹ️ Order #{id_comanda} is already processed. Acknowledging POS update.")
+                return jsonify({
+                    "success": True,
+                    "message": f"Order #{id_comanda} already processed. Status update received.",
+                    "status": "updated"
+                }), 200
+
+            # CAZ B: Comanda este nouă -> Trebuie mutată (Confirmare/Anulare)
             if operatiune not in ['CONFIRMA', 'ANULEAZA']:
                 return jsonify({
                     "error": "Parameter 'operatiune' must be 'CONFIRMA' or 'ANULEAZA'"
                 }), 400
-            
-            # Search for order file in comenzi/noi folder
-            if not COMENZI_NOI.exists():
-                return jsonify({
-                    "error": "No new orders to process"
-                }), 404
-            
-            comanda_file = None
-            for filename in os.listdir(COMENZI_NOI):
-                if filename.endswith('.json') and f"comanda_{id_comanda}.json" in filename:
-                    comanda_file = filename
-                    break
-            
-            if not comanda_file:
-                return jsonify({
-                    "error": f"Order #{id_comanda} not found in new orders"
-                }), 404
-            
-            source_path = COMENZI_NOI / comanda_file
             
             # Determine destination based on operation
             if operatiune == 'CONFIRMA':
@@ -211,8 +230,8 @@ def handle_comenzi():
             dest_folder.mkdir(parents=True, exist_ok=True)
             
             # Move file
-            dest_path = dest_folder / comanda_file
-            shutil.move(str(source_path), str(dest_path))
+            dest_path = dest_folder / found_path.name
+            shutil.move(str(found_path), str(dest_path))
             
             logger.info(status_message)
             
