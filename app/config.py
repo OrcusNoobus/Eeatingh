@@ -44,7 +44,7 @@ SMTP_PORT = 587
 
 # Configurări Email Listener
 IDLE_TIMEOUT = 20 * 60  # 20 minute
-EMAIL_SENDER = "royalmures@gmail.com"  # Expeditorul așteptat pentru comenzi
+EMAIL_SENDER = "orders@eeatingh.ro"  # Expeditorul așteptat pentru comenzi
 
 # Configurări Cleanup
 CLEANUP_THRESHOLD = 15  # Rulează cleanup la fiecare 15 comenzi
