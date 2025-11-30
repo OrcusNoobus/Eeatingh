@@ -285,12 +285,14 @@ def parse_order_html(html_doc: str) -> Optional[Dict]:
                 if tag_text == 'Plata:':
                     continue
                 payment_text = tag_text.lower()
-                if 'numerar' in payment_text or 'cash' in payment_text:
+
+                #schimbam prioritatea, punem "card online" primul
+                if 'online' in payment_text:
+                    order_data["mod_plata"] = "ONLINE"
+                elif 'numerar' in payment_text or 'cash' in payment_text:
                     order_data["mod_plata"] = "CASH"
                 elif 'pos' in payment_text or 'card' in payment_text or 'ramburs' in payment_text:
                     order_data["mod_plata"] = "CARD"
-                elif 'online' in payment_text:
-                    order_data["mod_plata"] = "ONLINE"
                 else:
                     order_data["mod_plata"] = "CASH"
                 break  # Found payment method, stop searching
