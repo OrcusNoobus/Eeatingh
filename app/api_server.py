@@ -76,7 +76,7 @@ def root():
     """Root endpoint cu informații despre API."""
     return jsonify({
         "service": "eeatingh-automation",
-        "version": "1.3",
+        "version": "1.4",
         "endpoints": {
             "health": "/api/health",
             "comenzi": "/api/comenzi [GET/POST]",
@@ -119,21 +119,27 @@ def handle_comenzi():
                     "status": "empty"
                 }), 200
             
-            # Search for the first order with status "processing"
-            for filename in sorted(os.listdir(COMENZI_NOI)):
-                if filename.endswith('.json'):
-                    filepath = COMENZI_NOI / filename
-                    try:
-                        with open(filepath, 'r', encoding='utf-8') as f:
-                            comanda_data = json.load(f)
+            # Search for the first order with status "processing". FIFO implementation added
+            # 1. Colectăm doar fișierele .json
+            files = [f for f in os.listdir(COMENZI_NOI) if f.endswith('.json')]
+            
+            # 2. Le sortăm alfabetic (implicit cronologic datorită numelui)
+            files.sort()
+
+            # 3. Iterăm prin lista curată și sortată
+            for filename in files:
+                filepath = COMENZI_NOI / filename
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        comanda_data = json.load(f)
                             # Verify structure and status
-                            comanda_inner = comanda_data.get("comanda", {})
-                            if comanda_inner.get("status_comanda") == "processing":
+                        comanda_inner = comanda_data.get("comanda", {})
+                        if comanda_inner.get("status_comanda") == "processing":
                                 # Return the entire order object directly
-                                logger.info(f"✅ Returning order #{comanda_inner.get('id_intern_comanda', 'unknown')}")
-                                return jsonify(comanda_data), 200
-                    except Exception as e:
-                        logger.error(f"Error reading file {filename}: {e}")
+                            logger.info(f"✅ Returning order #{comanda_inner.get('id_intern_comanda', 'unknown')}")
+                            return jsonify(comanda_data), 200
+                except Exception as e:
+                    logger.error(f"Error reading file {filename}: {e}")
             
             # No orders with "processing" status found
             return jsonify({
